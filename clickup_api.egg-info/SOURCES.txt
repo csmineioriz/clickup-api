@@ -1,0 +1,5 @@
+setup.py
+clickup_api.egg-info/PKG-INFO
+clickup_api.egg-info/SOURCES.txt
+clickup_api.egg-info/dependency_links.txt
+clickup_api.egg-info/top_level.txt

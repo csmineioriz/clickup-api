@@ -1,0 +1,8 @@
+Metadata-Version: 2.1
+Name: clickup_api
+Version: 0.1.0
+Summary: Pacote para interagir com a API do ClickUp
+Author: Ciro Minei
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
