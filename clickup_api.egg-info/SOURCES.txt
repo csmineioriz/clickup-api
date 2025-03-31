@@ -1,4 +1,8 @@
+README.md
+pyproject.toml
 setup.py
+clickup_api/__init__.py
+clickup_api/clickup_API.py
 clickup_api.egg-info/PKG-INFO
 clickup_api.egg-info/SOURCES.txt
 clickup_api.egg-info/dependency_links.txt

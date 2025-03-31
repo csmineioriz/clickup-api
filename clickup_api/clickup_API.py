@@ -97,7 +97,11 @@ def fetch_all():
                                 for field in fields:
                                     list_data["custom_fields"].append({
                                         "id": field["id"],
-                                        "name": field["name"]
+                                        "name": field["name"],
+                                        "type_config": field["type_config"],
+                                        "date_created": field["date_created"],
+                                        "hide_from_guests": field["hide_from_guests"],
+                                        "required": field["required"]
                                     })
 
                             space_data["lists"].append(list_data)
@@ -163,6 +167,18 @@ def get_custom_field_id_by_name(scope_name, field_name, scope_type="list"):
                         for field in lst.get("custom_fields", []):
                             if field["name"].lower() == field_name.lower():
                                 return field["id"]
+    return None
+
+def get_custom_field_options_by_custom_field_name(scope_name, field_name, scope_type="list"):
+    data = load_all_data()
+    if data:
+        for team in data.get("teams", []):
+            for space in team.get("spaces", []):
+                for lst in space.get("lists", []):
+                    if scope_type == "list" and lst["name"].lower() == scope_name.lower():
+                        for field in lst.get("custom_fields", []):
+                            if field["name"].lower() == field_name.lower():
+                                return field.get("type_config", {}).get("options", [])
     return None
 
 def get_group_id_by_name(team_name, group_name):
@@ -272,6 +288,8 @@ def update_custom_field(task_id, field_id, payload):
     else:
         print(f"Erro ao atualizar o custom field {field_id}: Código {response.status_code}, Detalhes: {response.text}")
 
+
+
 def get_custom_field_option(custom_fields, custom_field_name):
     """
     Retorna a opção de um campo personalizado com base no valor correspondente definido para o campo.
@@ -314,3 +332,68 @@ def get_custom_field_option(custom_fields, custom_field_name):
 
 # result = get_custom_field_option(custom_fields_example, "Status Solução Societario")
 # print(result)  # Saída: NOK
+
+
+def get_custom_field_value(custom_fields, custom_field_name):
+    """
+    Retorna o valor de um campo personalizado.
+
+    :param custom_fields: Lista de dicionários representando os campos personalizados.
+    :param custom_field_name: Nome do campo personalizado que deve ser processado.
+    :return: Valor do campo ou None se não encontrado.
+    """
+    # Procurar o campo correspondente
+    field_value = next((field.get('value') for field in custom_fields if field['name'] == custom_field_name), None)
+    return field_value
+
+# *** testar posteriormente ***
+# Função para obter os IDs e nomes dos usuários do time
+def get_team_members():
+    response = requests.get(TEAM_URL, headers=HEADERS)
+    if response.status_code == 200:
+        data = response.json()
+        if 'teams' in data and len(data['teams']) > 0 and 'members' in data['teams'][0]:
+            # Remover espaços dos nomes para normalizar
+            return {user['user']['username'].strip(): user['user']['id'] for user in data['teams'][0]['members']}
+        else:
+            raise Exception("Estrutura da resposta inesperada: 'teams' ou 'members' ausente.")
+    else:
+        raise Exception("Erro ao obter membros do time: ", response.status_code)
+    
+    
+def update_clickup_custom_fields_batch(df, update_plan):
+    """
+    Atualiza múltiplos campos customizados no ClickUp com base em um DataFrame.
+
+    Parâmetros:
+        df (pd.DataFrame): DataFrame com coluna 'id' e os dados a atualizar
+        update_plan (list of dict): Lista com instruções de update.
+            Cada dict deve conter:
+                - 'cfield_id': ID do campo customizado no ClickUp
+                - 'cfield_name': Nome da coluna no DataFrame com o valor
+                - 'include_time' (opcional): True se valor for datetime
+
+    Exemplo de update_plan:
+        [
+            {'cfield_id': 'abc123', 'cfield_name': 'CriadoEm_unix', 'include_time': True},
+            {'cfield_id': 'def456', 'cfield_name': 'DataDeEntrega_unix', 'include_time': False}
+        ]
+    """
+    for update_cfg in update_plan:
+        cfield_id = update_cfg['cfield_id']
+        cfield_name = update_cfg['cfield_name']
+        include_time = update_cfg.get('include_time', False)
+
+        print(f"\n▶ Atualizando campo '{cfield_name}' com ID '{cfield_id}'...")
+
+        df.apply(
+            lambda row: _update_cfield(row, cfield_id, cfield_name, include_time),
+            axis=1
+        )
+
+def _update_cfield(row, cfield_id, cfield_name, include_time=True):
+    payload = {'value': row[cfield_name]}
+    if include_time:
+        payload['value_options'] = {"time": True}
+
+    return update_custom_field(row['id'], cfield_id, payload)
